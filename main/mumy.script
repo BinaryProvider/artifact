@@ -1,0 +1,116 @@
+local Globals = require("main.logic.globals")
+
+local speed = 20
+
+local path = nil
+local org_path = nil
+
+function init(self)
+end
+
+function update(self, dt)
+
+	if (self.start_loc ~= nil) then
+
+		if (self.org_path ~= nil) then
+			for i = 1, #self.org_path - 1 do 
+				msg.post("@render:", "draw_line", { start_point = vmath.vector3((self.org_path[i].x * Globals.tile_size) - (Globals.tile_size / 2), (self.org_path[i].y * Globals.tile_size)  - (Globals.tile_size / 2), 1), end_point = vmath.vector3((self.org_path[i + 1].x * Globals.tile_size) - (Globals.tile_size / 2), (self.org_path[i + 1].y * Globals.tile_size)  - (Globals.tile_size / 2), 1), color = vmath.vector4(1, 1, 1, 1) } )
+			end
+		end
+	
+		if(self.path ~= nil) then
+		
+			for i = 1, #self.path - 1 do 
+				msg.post("@render:", "draw_line", { start_point = vmath.vector3((self.path[i].x * Globals.tile_size) - (Globals.tile_size / 2), (self.path[i].y * Globals.tile_size)  - (Globals.tile_size / 2), 1), end_point = vmath.vector3((self.path[i + 1].x * Globals.tile_size) - (Globals.tile_size / 2), (self.path[i + 1].y * Globals.tile_size)  - (Globals.tile_size / 2), 1), color = vmath.vector4(1, 0, 0, 1) } )
+			end
+				
+			if (#self.path > 0) then
+
+				pos = go.get_position()
+
+				if(pos.x == pos.x and pos.y == pos.y) then
+
+					local nextPos = vmath.vector3((self.path[1].x * Globals.tile_size) - (Globals.tile_size / 2), (self.path[1].y * Globals.tile_size) - (Globals.tile_size / 2), 1)
+		
+					local toX = (nextPos.x - pos.x);
+			    	local toY = (nextPos.y - pos.y);
+
+					if (toX ~= 0 or toY ~= 0) then
+					
+						if (nextPos.x == round(pos.x)) then
+							toX = round(nextPos.x)
+				    	end
+				    	
+				    	if (nextPos.y == round(pos.y)) then
+							toY = round(nextPos.y)
+				    	end
+				    				    				    	
+						local toLength = math.sqrt(toX * toX + toY * toY);
+						toX = toX / toLength;
+				    	toY = toY / toLength;
+		
+						local newX = pos.x + ((toX * speed) * dt)
+						local newY = pos.y + ((toY * speed) * dt)
+							
+						go.set_position(vmath.vector3(newX, newY, 1))
+					
+						if(round(newX) == nextPos.x and round(newY) == nextPos.y) then
+							table.remove(self.path, 1)
+							if(#self.path == 0) then
+								self.path = reverse(self.org_path)
+								self.org_path = shallowcopy(self.path)
+							end
+						end
+					else	
+						table.remove(self.path, 1)
+			    	end
+				
+
+				
+				end
+				
+			end
+		
+		end
+	
+	end	
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id == hash("spawn") then
+		
+		self.path = Grid:find_path({ x = math.ceil(message.start_loc.x / Globals.tile_size), y = math.ceil(message.start_loc.y / Globals.tile_size) }, { x = math.ceil(message.target_loc.x / Globals.tile_size), y = math.ceil(message.target_loc.y / Globals.tile_size) }).path
+		go.set_position(vmath.vector3((self.path[1].x * Globals.tile_size) - (Globals.tile_size / 2), (self.path[1].y * Globals.tile_size) - (Globals.tile_size / 2), 1))
+
+		self.org_path = shallowcopy(self.path)
+		self.start_loc = vmath.vector3((self.path[1].x * Globals.tile_size) - (Globals.tile_size / 2), (self.path[1].y * Globals.tile_size) - (Globals.tile_size / 2), 1)
+		
+    end
+end
+
+function round(num)
+    return num>=0 and math.floor(num+0.5) or math.ceil(num-0.5)
+end
+
+function shallowcopy(orig)
+    local orig_type = type(orig)
+    local copy
+    if orig_type == 'table' then
+        copy = {}
+        for orig_key, orig_value in pairs(orig) do
+            copy[orig_key] = orig_value
+        end
+    else
+        copy = orig
+    end
+    return copy
+end
+
+function reverse(t)
+    local reversedTable = {}
+    local itemCount = #t
+    for k, v in ipairs(t) do
+        reversedTable[itemCount + 1 - k] = v
+    end
+    return reversedTable
+end

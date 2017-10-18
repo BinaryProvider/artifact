@@ -1,0 +1,413 @@
+
+êç
+≠Hrequire("main.grid")
+
+go.property("start_loc", vmath.vector3(-1, -1, 1))
+go.property("portal_loc", vmath.vector3(-1, -1, 1))
+
+local Globals = require("main.logic.globals")
+local TileType = require("main.tiletype")
+local GameState = require("main.logic.gamestate")
+local ScoreSet = require("main.logic.scoreset")
+
+local timer = require("libraries.utils.timer")
+
+math.randomseed(os.time())
+math.random(); math.random(); math.random()
+
+function init(self)
+
+	msg.post("music#song", "play_sound", { gain = 0.8 })
+	msg.post(".", "acquire_input_focus")
+	
+	go.set_position(vmath.vector3(-100000, -100000, 1), "avatar")
+	go.set_position(vmath.vector3(-100000, -100000, 1), "mumy")
+		
+	self.prev_col_group = ""
+	self.spawn_locations = {}
+	self.spawned_objects = {}
+	
+	GameState.LEVEL = 1
+	GameState.TIME_LEFT = 0 
+	GameState.GAME_WON = false
+	GameState.reset()
+	add_score(-GameState.SCORE)
+	Globals.maze_size = 4
+	
+	msg.post(".", "release_input_focus")
+	msg.post("avatar#script", "start", { })
+	
+	reset(self)	
+end
+
+function reset(self)
+
+	GameState:reset()
+
+	go.delete_all(self.spawned_objects)
+	
+	if self.key_id ~= nil then
+		go.delete(self.key_id)
+	end
+	
+	if self.portal_id ~= nil then
+		go.delete(self.portal_id)
+	end
+
+	self.spawn_locations = {}
+	self.spawned_objects = {}
+	self.prev_col_group = ""
+
+ 	msg.post("avatar", "reset", {})
+
+	local grid_size = Globals.maze_size
+	
+	if Globals.maze_size < 20 then
+		grid_size = 20
+	end
+	
+	self.Grid = Grid(grid_size, grid_size, Globals.tile_size, "level#tilemap", "level", Globals.maze_size, Globals.maze_size)
+	
+	table.insert(self.spawn_locations, self.Grid.maze_start_loc)
+	table.insert(self.spawn_locations, self.Grid.maze_end_loc)
+	
+	self.start_loc.x = (self.Grid.maze_start_loc.x * Globals.tile_size) - (Globals.tile_size / 2)
+	self.start_loc.y = (self.Grid.maze_start_loc.y * Globals.tile_size) - (Globals.tile_size / 2)
+	go.set_position(vmath.vector3(self.start_loc.x, self.start_loc.y, 1), "avatar")
+	
+	self.portal_loc.x = (self.Grid.maze_end_loc.x * Globals.tile_size) - (Globals.tile_size / 2)
+	self.portal_loc.y = (self.Grid.maze_end_loc.y * Globals.tile_size) - (Globals.tile_size / 2)
+	self.portal_id = factory.create("factory#portal", vmath.vector3(self.portal_loc.x, self.portal_loc.y, 0), nil, { }, vmath.vector3(1, 1, 1))
+	table.insert(self.spawned_objects, self.portal_id)
+	
+	local key_loc = random_spawn_loc(self)
+	self.key_id = factory.create("factory#key", vmath.vector3(key_loc.x, key_loc.y, 1), nil, { }, vmath.vector3(1, 1, 1))
+	
+	local grid_key_loc = { x = math.ceil(key_loc.x / Globals.tile_size), y = math.ceil(key_loc.y / Globals.tile_size) }
+	local avatar_key_distance = Grid:find_path(self.Grid.maze_start_loc, grid_key_loc).length
+	local key_portal_distance = Grid:find_path(grid_key_loc, self.Grid.maze_end_loc).length
+	local base_time = math.ceil((avatar_key_distance + key_portal_distance) * 0.2)
+
+	msg.post("camera", "reset", { default_position = vmath.vector3(self.start_loc.x, self.start_loc.y, 1) })
+	--msg.post("mumy#script", "spawn", { start_loc = random_spawn_loc(self), target_loc = random_spawn_loc(self) })
+
+	if GameState.LEVEL > 1 then
+	
+		for i = 1, math.floor(Globals.maze_size / 3) do
+		
+			local type = math.random(3)
+		
+			if type == 1 then
+				local loc = random_spawn_loc(self)
+				local id = factory.create("factory#diamond", vmath.vector3(loc.x, loc.y, 1), nil, { }, vmath.vector3(1, 1, 1))
+				table.insert(self.spawned_objects, id)
+			elseif type == 2 then
+				local loc = random_spawn_loc(self)
+				local id = factory.create("factory#coins", vmath.vector3(loc.x, loc.y, 1), nil, { }, vmath.vector3(1, 1, 1))
+				table.insert(self.spawned_objects, id)
+			elseif type == 3 then
+				local loc = random_spawn_loc(self)
+				local id = factory.create("factory#ruby", vmath.vector3(loc.x, loc.y, 1), nil, { }, vmath.vector3(0.7, 0.7, 0.7))
+				table.insert(self.spawned_objects, id)
+			end
+			
+		end
+	
+	end
+	
+	if GameState.LEVEL > 3 then
+		local artifact_loc = random_spawn_loc(self)
+		local id = factory.create("factory#artifact", vmath.vector3(artifact_loc.x, artifact_loc.y, 1), nil, { }, vmath.vector3(1, 1, 1))
+		table.insert(self.spawned_objects, id)
+	end
+
+	
+	self.reset = false
+	
+	Globals.maze_size = Globals.maze_size + 2
+	
+	local bonus_time = (math.ceil(Globals.maze_size / 3)) + math.ceil(GameState.TIME_LEFT / 2)
+	
+	if GameState.LEVEL < 5 then
+		bonus_time = math.ceil(GameState.TIME_LEFT / 2)
+	end
+	
+	GameState.TIME_LEFT = GameState.TIME_PER_LEVEL + bonus_time
+	
+	--GameState.TIME_LEFT = base_time
+	
+	msg.post("gui#gui", "update_time_left", { time = GameState.TIME_LEFT })
+	msg.post("gui#gui", "update_level", { level = GameState.LEVEL })
+	
+	timer.cancel_all()
+	timer.repeat_seconds(1, count_down)
+end
+
+function count_down()
+	if GameState.GAME_WON == false then
+		GameState.TIME_LEFT = GameState.TIME_LEFT - 1
+		msg.post("gui#gui", "update_time_left", { time = GameState.TIME_LEFT })
+	end
+end
+
+function random_spawn_loc(self)
+	local tile_loc = self.Grid.walkable_tiles[math.random(table.getn(self.Grid.walkable_tiles))]
+
+	while occupied_loc(self, tile_loc) do
+		tile_loc = self.Grid.walkable_tiles[math.random(table.getn(self.Grid.walkable_tiles))]
+	end
+	
+	table.insert(self.spawn_locations, tile_loc)
+	
+	local converted_loc = vmath.vector3((tile_loc.x * Globals.tile_size) - (Globals.tile_size / 2), (tile_loc.y * Globals.tile_size) - (Globals.tile_size / 2), 1)
+	return converted_loc
+end
+
+function occupied_loc(self, tile_loc)
+
+	if self.spawn_locations ~= nil then
+		for _, spawn_loc in pairs(self.spawn_locations) do
+			if tile_loc.x == spawn_loc.x and tile_loc.y == spawn_loc.y then
+				return true
+			end
+		end
+	end
+	
+	return false
+
+end
+
+function update(self, dt)
+	timer.update(dt)
+	
+	if GameState.TIME_LEFT == 0 and GameState.WELCOME == false then
+		game_over(self, dt)
+	end 
+	
+    if self.reset then
+    	reset(self)
+    end
+end
+
+function game_over(self, dt)
+	timer.cancel_all()
+	GameState.GAME_OVER = true
+	msg.post(".", "acquire_input_focus")
+end
+
+function on_message(self, message_id, message, sender)
+    if message_id == hash("avatar_collision") then
+    	if message.group == hash("walls") then
+ 			--do something
+ 		elseif message.group == hash("key") then
+ 			if self.prev_col_group ~= message.group then
+	 			if GameState.PORTAL_OPEN == false then
+	 				delete_object(message.other_id)
+	 				msg.post("fx#key", "play_sound", {delay = 0, gain = 0.9 })
+	 				GameState.PORTAL_OPEN = true
+	 				msg.post(self.portal_id, "play_animation", {id = hash("unlocked") })
+	 				add_score(ScoreSet.KEY)
+	 			end
+ 			end
+ 		elseif message.group == hash("portal") then
+ 			if self.prev_col_group ~= message.group then
+	 			if GameState.PORTAL_OPEN then
+	 				msg.post("fx#portal", "play_sound", {delay = 0, gain = 0.9 })
+	 				level_complete(self)
+					self.reset = true
+				end
+			end
+ 		elseif message.group == hash("diamond") then
+			if self.prev_col_group ~= message.group then
+ 				delete_object(message.other_id)
+ 				msg.post("fx#diamond", "play_sound", {delay = 0, gain = 0.9 })
+ 				add_score(ScoreSet.DIAMOND)
+ 			end
+ 		elseif message.group == hash("artifact") then
+			if self.prev_col_group ~= message.group then
+ 				delete_object(message.other_id)
+ 				msg.post("fx#artifact", "play_sound", {delay = 0, gain = 0.9 })
+ 				add_score(ScoreSet.TIME_BOX)
+ 				add_time(3)
+ 			end
+ 		elseif message.group == hash("coins") then
+			if self.prev_col_group ~= message.group then
+ 				delete_object(message.other_id)
+ 				msg.post("fx#coins", "play_sound", {delay = 0, gain = 0.9 })
+ 				add_score(ScoreSet.COINS)
+ 			end
+ 		elseif message.group == hash("ruby") then
+			if self.prev_col_group ~= message.group then
+ 				delete_object(message.other_id)
+ 				msg.post("fx#ruby", "play_sound", {delay = 0, gain = 0.9 })
+ 				add_score(ScoreSet.RUBY)
+ 			end
+ 		end
+ 		
+		self.prev_col_group = message.group
+    end
+end
+
+function add_time(time)
+	GameState.TIME_LEFT = (GameState.TIME_LEFT + time) + 1
+	msg.post("gui#gui", "update_time_left", { time = GameState.TIME_LEFT })
+end
+
+function level_complete(self)
+	GameState.LEVEL = GameState.LEVEL + 1	
+ 	add_score(ScoreSet.LEVEL_COMPLETE)
+ 	
+ 	if GameState.LEVEL == 9 then
+ 		game_won(self)
+ 	end
+ 	
+end
+
+function game_won(self)
+	timer.cancel_all()
+	GameState.GAME_WON = true
+	msg.post(".", "acquire_input_focus")
+end
+
+function add_score(points)
+	GameState.SCORE = GameState.SCORE + points
+	msg.post("gui#gui", "update_score", { score = GameState.SCORE })
+end
+
+function delete_object(id)
+	go.set_position(vmath.vector3(-1000000, -1000000, 0), id)
+end
+
+function final(self)
+	timer.cancel_all()
+end
+
+function on_reload(self)
+	Globals.maze_size = 4
+	self.reset = true
+end
+
+function on_input(self, action_id, action)
+	
+	if action_id == hash("action") and action.pressed then
+		if GameState.WELCOME then
+			msg.post(".", "release_input_focus")
+			msg.post("avatar#script", "start", { })
+			msg.post("gui#gui", "hide_welcome", { })
+			GameState.WELCOME = false
+			reset(self)
+		else
+			GameState.LEVEL = 1
+			GameState.TIME_LEFT = 0
+			GameState.GAME_WON = false
+			GameState.reset()
+			add_score(-GameState.SCORE)
+			Globals.maze_size = 4
+			msg.post(".", "release_input_focus")
+			msg.post("avatar#script", "start", { })
+			msg.post("gamewon", "disable")
+			msg.post("gameover", "disable")
+			reset(self)
+		end
+	end
+	
+end/main/level.script…DLJ =/main/level.scriptò Hb4  7% % 3 >4  7% % >4 74	 7
+(  (  ' >% >4 74	 7
+(  (  ' >% >% : 2  : 2  : +  ' :+  '  :+  ) :+  7>4 +  7 >+ ' :4  7% % >4  7% % 2  >4   >G  ¿ ¿
+startavatar#scriptrelease_input_focusmaze_size
+SCOREadd_score
+resetGAME_WONTIME_LEFT
+LEVELspawned_objectsspawn_locationsprev_col_group	mumyavatarvector3
+vmathset_positiongoacquire_input_focus. 	gainö≥ÊÃ	ô≥¶ˇplay_soundmusic#song	postmsg¿ÂÛˇ		
+
+GameState Globals self  I á <¨Ü)e+   7 >4 77 >7 
+  TÄ4 77 >7 
+  TÄ4 77 >2  : 2  : %	 : 4
+ 7% %  2  >+ 7+ 7'  TÄ' 4   + 7% % + 7+	 7		>: 4 77 7 7>4 77 7 7>7 7 77+ 7 + 7 :7 7 77+ 7 + 7 :4 74 77 77 7' >% >7 7 77+ 7 + 7 :7 7 77+ 7 + 7 :4 7% 4 77 77 7'  >)  2  4 7' '	 '
+ > =: 4 77 7 >4    >4 7%! 4 777' >)  2  4 7'	 '
+ ' > =: 3$ 4" 7#7+ 7!>:4" 7#7+ 7!>:4  7%7 7 >7&4  7% 7 7>7&4" 7#>4
+ 7%' %	  3
+( 4 77 77 7' >:)
+>+  7*'  TdÄ' 4" 7++	 7				>'	 I[Ä4" 7,' >	 TÄ4    >4 7%- 4 777' >)  2  4 7' ' ' > =4 77  >T9Ä	  TÄ4    >4 7%. 4 777' >)  2  4 7' ' ' > =4 77  >TÄ	 TÄ4    >4 7%/ 4 777' >)  2  4 7( ( ( > =4 77  >K•+  7*'  TÄ4    >4 7%	0 4
+ 7
+
+77' >
+)  2  4 7' ' ' > =4	 7		7
+  >	) :  + + 7 :4" 7#+ 7>4" 7#+	  7	1		 	>+  7*'	 	 TÄ4" 7#+	  7	1		 	> +  +	  7	2			:	14
+ 7%	3 %
+4 35 +  71:6>4
+ 7%	3 %
+7 38 +  7*:>+ 79>+ 7:'	 4
+; >G  ¿ ¿¿count_downrepeat_secondscancel_all  update_level	time  update_time_leftgui#guiTIME_PER_LEVELTIME_LEFTfactory#artifactfactory#rubyfactory#coinsfactory#diamondrandom
+floor
+LEVELdefault_position  cameralengthfind_path  	ceil	mathfactory#keyrandom_spawn_locfactory#portalcreatefactoryportal_locvector3
+vmathset_positionyxstart_locmaze_end_locmaze_start_locinsert
+table
+levellevel#tilemaptile_size	Gridmaze_sizeavatar	postmsgprev_col_groupspawn_locationsportal_iddeletekey_idspawned_objectsdelete_allgo
+resetµÊÃôô≥¶˛Õô≥ÊÊÃôˇ
+
+
+            !!!!!!!!!!!!############$$$$$$$$$$$$%%%%%%%%%%%%%%%%%%%%%&&&&&((()))))))))))))))))))+++++++++++++++++,,,,,,,,--------.....00000000000000033333555555555777799:::;;;;;;;;;;;;;;;;;;<<<<<<==>>>??????????????????@@@@@@AABBBCCCCCCCCCCCCCCCCCCDDDDD5KKKKKLLLMMMMMMMMMMMMMMMMMMNNNNNRRTTTTTVVVVVVVVVVVVVXXXXXYYYYYYY\\\\\`````````aaaaaaaaacccdddddeGameState Globals timer self  ≠grid_size %àkey_loc xêgrid_key_loc $Ïavatar_key_distance ‰key_portal_distance ‹base_time ◊\ \ \i Ztype Vloc id loc id loc id artifact_loc id bonus_time , µ  ê+   7     T Ä+   +  7 : 4  7  % % 3 +  7:> G  ¿	time  update_time_leftgui#gui	postmsgTIME_LEFTGAME_WONGameState  º 8có7  74 74 77  7> = 64    >  TÄQÄ7  74 74 77  7> = 6TÌ4 77  >4	 7
+7+  7 +  7 7+  7 +  7 ' >H  ¿ytile_sizexvector3
+vmathspawn_locationsinsertoccupied_loc	getn
+tablerandom	mathwalkable_tiles	Grid																				
+Globals self  9tile_loc -converted_loc , ∫ 	  A§7  
+  TÄ4 7  >D
+Ä77 TÄ77 TÄ) H BNÙ) H yx
+pairsspawn_locations
+
+self  tile_loc    _ 
+spawn_loc  
+ … 4≤
++  7  >+ 7	  TÄ+ 7 TÄ4    >7   TÄ4   >G  ¿¿
+resetgame_overWELCOMETIME_LEFTupdate 
+timer GameState self  dt   ú  )æ+  7 >+ ) :4 7% % >G  ¿¿acquire_input_focus.	postmsgGAME_OVERcancel_alltimer GameState self  dt   Æ 
++ ¥Ûƒ34  % > TÆÄ74  % > TÄT•Ä74  % > T#Ä7 7 TõÄ+  7 TóÄ4 7>4	 7
+% % 3 >+  ) :4	 7
+7 % 3 4  %	 >:>4 + 7>T|Ä74  % > TÄ7 7 TrÄ+  7  TnÄ4	 7
+% % 3 >4   >) : TbÄ74  % > TÄ7 7 TXÄ4 7>4	 7
+% % 3 >4 + 7>TJÄ74  % > TÄ7 7 T@Ä4 7>4	 7
+% % 3  >4 + 7!>4" ' >T/Ä74  %# > TÄ7 7 T%Ä4 7>4	 7
+%$ % 3% >4 + 7&>TÄ74  %' > TÄ7 7 TÄ4 7>4	 7
+%( % 3) >4 + 7*>7: G  ¿¿	RUBY 
+delay 	gainÕô≥ÊÃô≥ˇfx#ruby	ruby
+COINS 
+delay 	gainÕô≥ÊÃô≥ˇfx#coins
+coinsadd_timeTIME_BOX 
+delay 	gainÕô≥ÊÃô≥ˇfx#artifactartifactDIAMOND 
+delay 	gainÕô≥ÊÃô≥ˇfx#diamonddiamond
+resetlevel_complete 
+delay 	gainÕô≥ÊÃô≥ˇfx#portalportalKEYadd_scoreid  unlockedplay_animationportal_id 
+delay 	gainÕô≥ÊÃô≥ˇplay_soundfx#key	postmsgother_iddelete_objectPORTAL_OPENprev_col_groupkey
+walls
+groupavatar_collision	hash			
+
+
+
+
+
+
+
+
+
+    !!!"######$$$$%%%&&&&&&''''())))))****+++,,,,,,----113GameState ScoreSet self  µmessage_id  µmessage  µsender  µ § "˘+  +  7   : 4 7% % 3 +  7 :>G  ¿	time  update_time_leftgui#gui	postmsgTIME_LEFTGameState time   © ,˛+  +  7  : 4 + 7>+  7 	 TÄ4   >G  ¿¿game_wonLEVEL_COMPLETEadd_score
+LEVELGameState ScoreSet self   ñ  $à+  7 >+ ) :4 7% % >G  ¿¿acquire_input_focus.	postmsgGAME_WONcancel_alltimer GameState self   ô  #é+  +  7  : 4 7% % 3 +  7 :>G  ¿
+score  update_scoregui#gui	postmsg
+SCOREGameState points   k  ì4  74 7(  (  '  >  >G  vector3
+vmathset_positiongoÄ˜Öˇid   :  ó+  7 >G  ¿cancel_alltimer self   K  õ+  ' : ) : G   ¿
+resetmaze_sizeGlobals self   ä  QÄ†4  % > TKÄ7  THÄ+  7  TÄ4 7% % >4 7% %	 2  >4 7%
+ % 2  >+  ) :4   >T,Ä+  ' :+  '  :+  ) :+  7>4 +  7 >+ ' :4 7% % >4 7% %	 2  >4 7% % >4 7% % >4   >G  ¿ ¿gameoverdisablegamewonmaze_size
+SCOREadd_scoreGAME_WONTIME_LEFT
+LEVEL
+resethide_welcomegui#gui
+startavatar#scriptrelease_input_focus.	postmsgWELCOMEpressedaction	hash
+
+
+GameState Globals self  Raction_id  Raction  R Ω  2 W„ ∏4   % > 4  7  % 4 7'ˇˇ'ˇˇ' > = 4  7  % 4 7'ˇˇ'ˇˇ' > = 4   % > 4  %	 >4  %
+ >4  % >4  % >4 74 7> = 4 7>4 7>4 7>1 5 1 5 1 5 1 5 1 5 1 5 1 5 1  5! 1" 5# 1$ 5% 1& 5' 1( 5) 1* 5+ 1, 5- 1. 5/ 10 51 0  ÄG  on_input on_reload 
+final delete_object add_score game_won level_complete add_time on_message game_over update occupied_loc random_spawn_loc count_down 
+reset 	init random	timeosrandomseed	mathlibraries.utils.timermain.logic.scoresetmain.logic.gamestatemain.tiletypemain.logic.globalsportal_locvector3
+vmathstart_locpropertygomain.gridrequire                                	 	 	                   '  é ) ï ê ¢ ó ∞ § º ≤ ¬ æ ˜ ƒ ¸ ˘ ˛ 8 88Globals =TileType :GameState 7ScoreSet 4timer 1  	main.gridmain.logic.globalsmain.tiletypemain.logic.gamestatemain.logic.scoresetlibraries.utils.timer/main/grid.luac/main/logic/globals.luac/main/tiletype.luac/main/logic/gamestate.luac/main/logic/scoreset.luac/libraries/utils/timer.luac"S"
+	start_loc∑ÌÅËì’‡Øö "
+
+portal_locöŸ¶í Ωﬁ∑√E  ÄøE  ÄøE  Ä?E  ÄøE  ÄøE  Ä?

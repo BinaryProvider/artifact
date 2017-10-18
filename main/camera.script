@@ -1,0 +1,129 @@
+go.property("default_interpolation", 0.5)
+go.property("scroll_interpolation", 0.5)
+go.property("scroll_speed", 10)
+go.property("start_position", vmath.vector3(0, 0, 5))
+go.property("scroll_offset_max", vmath.vector3(0, 0, 0))
+go.property("scroll_offset_min", vmath.vector3(0, 0, 0))
+go.property("scrollable", false)
+
+local Globals = require("main.logic.globals")
+
+local scroll = false
+local scroll_coord = { x = 0, y = 0 }
+
+function init(self)
+
+	self.default_position = vmath.vector3(self.start_position.x, self.start_position.y, self.start_position.z)
+
+	msg.post(".", "acquire_input_focus")
+	msg.post("#camera", "acquire_camera_focus")
+
+	self.scroll_offset_min = vmath.vector3(0, 0, 0)
+	self.scroll_offset_max = vmath.vector3((Globals.tile_size * Globals.maze_size) - 352, (Globals.tile_size * Globals.maze_size) - 331, 0) 
+	
+	self.pos = self.default_position	
+	self.look_at = self.default_position
+	self.speed = 0	
+
+end
+
+function update(self, dt)
+	local interpolation = self.default_interpolation
+	
+	if scroll then
+		interpolation = self.scroll_interpolation
+	end
+	
+	if Globals.maze_size > 20 then
+	
+		self.look_at = go.get_position("avatar")
+		self.look_at.x = self.look_at.x - 168
+		self.look_at.y = self.look_at.y - 168
+		
+		if self.look_at.x < self.scroll_offset_min.x then
+			self.look_at.x = self.scroll_offset_min.x
+		end
+		
+		if self.look_at.y < self.scroll_offset_min.y then
+			self.look_at.y = self.scroll_offset_min.y
+		end
+
+		if self.look_at.y > self.scroll_offset_max.y  then
+			self.look_at.y = self.scroll_offset_max.y 
+		end 
+		
+		if self.look_at.x > self.scroll_offset_max.x  then
+			self.look_at.x = self.scroll_offset_max.x 
+		end 
+		
+	end
+	
+	self.pos = vmath.lerp(interpolation, self.pos, self.look_at)
+	self.pos.z = self.start_position.z
+	
+	go.set_position(self.pos)
+end
+
+function on_input(self, action_id, action)
+
+	if action_id == hash("mouse_right") then
+	
+		if scrollable then
+			if action.pressed then
+	    		scroll = true
+	    		scroll_coord.x = action.x
+	    		scroll_coord.y = action.y
+	    	elseif action.released then
+	    		scroll = false
+	    	end
+    	end
+    	
+    elseif action_id == nil and scroll then
+    
+		local next_scroll_coord = calc_scroll_coord(self, action, scroll_coord)
+		self.look_at = vmath.vector3(next_scroll_coord.x, next_scroll_coord.y, self.pos.z)
+		
+		scroll_coord.x = action.x
+    	scroll_coord.y = action.y
+    	
+	end
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id == hash("scroll_to") then
+		local next_scroll_coord = calculateNextScrollCoord(self.pos, self.pos, message.coord)
+		self.look_at = vmath.vector3(next_scroll_coord.x, next_scroll_coord.y, self.pos.z)
+    elseif message_id == hash("reset") then
+    
+    	self.default_position = vmath.vector3(message.default_position.x, message.default_position.y, self.pos.z)
+    
+		self.scroll_offset_min = vmath.vector3(0, 0, 0)
+		self.scroll_offset_max = vmath.vector3((Globals.tile_size * Globals.maze_size) - 352, (Globals.tile_size * Globals.maze_size) - 331, 0) 
+		
+		--self.pos = self.default_position	
+		--self.look_at = self.default_position
+		
+		self.speed = 0	
+		
+		go.set_position(self.pos)
+    end
+end
+
+function calc_scroll_coord(self, action, scroll_coord)
+    local scroll_distance = { x = (math.abs(action.x) - math.abs(scroll_coord.x)), y = (math.abs(action.y) - math.abs(scroll_coord.y)) }
+	local next_scroll_coord = { x = self.pos.x - (self.scroll_speed * scroll_distance.x), y = self.pos.y - (self.scroll_speed * scroll_distance.y) }
+	
+	if next_scroll_coord.y < self.scroll_offset_min.y then
+		next_scroll_coord.y = self.scroll_offset_min.y
+	elseif next_scroll_coord.y > self.scroll_offset_max.y then
+		next_scroll_coord.y = self.scroll_offset_max.y
+	end
+	
+	if next_scroll_coord.x < self.scroll_offset_min.x then
+		next_scroll_coord.x = self.scroll_offset_min.x
+	elseif next_scroll_coord.x > self.scroll_offset_max.x then
+		next_scroll_coord.x = self.scroll_offset_max.x
+	end
+	
+	return next_scroll_coord
+end

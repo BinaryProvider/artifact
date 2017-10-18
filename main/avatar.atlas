@@ -1,0 +1,113 @@
+animations {
+  id: "walk_down"
+  images {
+    image: "/resources/avatar_stand_down.png"
+  }
+  images {
+    image: "/resources/avatar_walk_down_1.png"
+  }
+  images {
+    image: "/resources/avatar_walk_down_2.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+  fps: 10
+  flip_horizontal: 0
+  flip_vertical: 0
+}
+animations {
+  id: "walk_up"
+  images {
+    image: "/resources/avatar_stand_up.png"
+  }
+  images {
+    image: "/resources/avatar_walk_up_1.png"
+  }
+  images {
+    image: "/resources/avatar_walk_up_2.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+  fps: 10
+  flip_horizontal: 0
+  flip_vertical: 0
+}
+animations {
+  id: "walk_left"
+  images {
+    image: "/resources/avatar_stand_left.png"
+  }
+  images {
+    image: "/resources/avatar_walk_left_1.png"
+  }
+  images {
+    image: "/resources/avatar_stand_left.png"
+  }
+  images {
+    image: "/resources/avatar_walk_left_2.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+  fps: 10
+  flip_horizontal: 0
+  flip_vertical: 0
+}
+animations {
+  id: "walk_right"
+  images {
+    image: "/resources/avatar_stand_right.png"
+  }
+  images {
+    image: "/resources/avatar_walk_right_1.png"
+  }
+  images {
+    image: "/resources/avatar_stand_right.png"
+  }
+  images {
+    image: "/resources/avatar_walk_right_2.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+  fps: 10
+  flip_horizontal: 0
+  flip_vertical: 0
+}
+animations {
+  id: "stand_left"
+  images {
+    image: "/resources/avatar_stand_left.png"
+  }
+  playback: PLAYBACK_NONE
+  fps: 30
+  flip_horizontal: 0
+  flip_vertical: 0
+}
+animations {
+  id: "stand_right"
+  images {
+    image: "/resources/avatar_stand_right.png"
+  }
+  playback: PLAYBACK_NONE
+  fps: 30
+  flip_horizontal: 0
+  flip_vertical: 0
+}
+animations {
+  id: "stand_down"
+  images {
+    image: "/resources/avatar_stand_down.png"
+  }
+  playback: PLAYBACK_NONE
+  fps: 30
+  flip_horizontal: 0
+  flip_vertical: 0
+}
+animations {
+  id: "stand_up"
+  images {
+    image: "/resources/avatar_stand_up.png"
+  }
+  playback: PLAYBACK_NONE
+  fps: 30
+  flip_horizontal: 0
+  flip_vertical: 0
+}
+margin: 0
+extrude_borders: 0
+inner_padding: 0

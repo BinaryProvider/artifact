@@ -1,0 +1,29 @@
+animations {
+  id: "locked"
+  images {
+    image: "/resources/portal_locked_1.png"
+  }
+  images {
+    image: "/resources/portal_locked_2.png"
+  }
+  playback: PLAYBACK_LOOP_PINGPONG
+  fps: 4
+  flip_horizontal: 0
+  flip_vertical: 0
+}
+animations {
+  id: "unlocked"
+  images {
+    image: "/resources/portal_unlocked_1.png"
+  }
+  images {
+    image: "/resources/portal_unlocked_2.png"
+  }
+  playback: PLAYBACK_LOOP_PINGPONG
+  fps: 4
+  flip_horizontal: 0
+  flip_vertical: 0
+}
+margin: 0
+extrude_borders: 0
+inner_padding: 0

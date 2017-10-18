@@ -1,0 +1,293 @@
+script: "/main/gui/game.gui_script"
+fonts {
+  name: "game"
+  font: "/main/gui/game.font"
+}
+textures {
+  name: "artifact"
+  texture: "/main/items/artifact.atlas"
+}
+textures {
+  name: "coins"
+  texture: "/main/items/coins.atlas"
+}
+textures {
+  name: "diamond"
+  texture: "/main/items/diamond.atlas"
+}
+textures {
+  name: "key"
+  texture: "/main/items/key.atlas"
+}
+textures {
+  name: "portal"
+  texture: "/main/items/portal.atlas"
+}
+textures {
+  name: "ruby"
+  texture: "/main/items/ruby.atlas"
+}
+background_color {
+  w: 1.0
+}
+nodes {
+  position {
+    x: 168.0
+    y: 326.0
+    z: -1.0
+    w: 1.0
+  }
+  rotation {
+    w: 1.0
+  }
+  scale {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+    w: 1.0
+  }
+  size {
+    x: 336.0
+    y: 20.0
+    w: 1.0
+  }
+  color {
+    x: 0.1254902
+    y: 0.1254902
+    z: 0.1254902
+    w: 1.0
+  }
+  id: "score_box"
+  inherit_alpha: true
+  alpha: 0.8
+}
+nodes {
+  position {
+    x: 329.307
+    y: 326.5038
+    w: 1.0
+  }
+  rotation {
+    w: 1.0
+  }
+  scale {
+    x: 0.5
+    y: 0.5
+    z: 0.5
+    w: 1.0
+  }
+  size {
+    x: 200.0
+    y: 20.0
+    w: 1.0
+  }
+  color {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+    w: 1.0
+  }
+  type: TYPE_TEXT
+  text: "0"
+  font: "game"
+  id: "time_left"
+  pivot: PIVOT_E
+  outline {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+    w: 1.0
+  }
+  shadow {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+    w: 1.0
+  }
+  inherit_alpha: true
+  size_mode: SIZE_MODE_AUTO
+}
+nodes {
+  position {
+    x: 305.83542
+    y: 326.5038
+    w: 1.0
+  }
+  rotation {
+    w: 1.0
+  }
+  scale {
+    x: 0.5
+    y: 0.5
+    z: 0.5
+    w: 1.0
+  }
+  size {
+    x: 200.0
+    y: 20.0
+    w: 1.0
+  }
+  color {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+    w: 1.0
+  }
+  type: TYPE_TEXT
+  text: "TIME LEFT:"
+  font: "game"
+  id: "time_left_header"
+  pivot: PIVOT_E
+  outline {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+    w: 1.0
+  }
+  shadow {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+    w: 1.0
+  }
+  inherit_alpha: true
+  size_mode: SIZE_MODE_AUTO
+}
+nodes {
+  position {
+    x: 6.2674117
+    y: 326.5038
+    w: 1.0
+  }
+  rotation {
+    w: 1.0
+  }
+  scale {
+    x: 0.5
+    y: 0.5
+    z: 0.5
+    w: 1.0
+  }
+  size {
+    x: 200.0
+    y: 20.0
+    w: 1.0
+  }
+  color {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+    w: 1.0
+  }
+  type: TYPE_TEXT
+  text: "SCORE:"
+  font: "game"
+  id: "score_header"
+  pivot: PIVOT_W
+  outline {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+    w: 1.0
+  }
+  shadow {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+    w: 1.0
+  }
+  inherit_alpha: true
+  size_mode: SIZE_MODE_AUTO
+}
+nodes {
+  position {
+    x: 42.938225
+    y: 326.5038
+    w: 1.0
+  }
+  rotation {
+    w: 1.0
+  }
+  scale {
+    x: 0.5
+    y: 0.5
+    z: 0.5
+    w: 1.0
+  }
+  size {
+    x: 200.0
+    y: 20.0
+    w: 1.0
+  }
+  color {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+    w: 1.0
+  }
+  type: TYPE_TEXT
+  text: "0"
+  font: "game"
+  id: "score"
+  pivot: PIVOT_W
+  outline {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+    w: 1.0
+  }
+  shadow {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+    w: 1.0
+  }
+  inherit_alpha: true
+  size_mode: SIZE_MODE_AUTO
+}
+nodes {
+  position {
+    x: 168.0
+    y: 326.5038
+    w: 1.0
+  }
+  rotation {
+    w: 1.0
+  }
+  scale {
+    x: 0.5
+    y: 0.5
+    z: 0.5
+    w: 1.0
+  }
+  size {
+    x: 200.0
+    y: 20.0
+    w: 1.0
+  }
+  color {
+    x: 0.97647065
+    y: 0.8431373
+    z: 0.09019608
+    w: 1.0
+  }
+  type: TYPE_TEXT
+  text: "LEVEL 1"
+  font: "game"
+  id: "level"
+  outline {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+    w: 1.0
+  }
+  shadow {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+    w: 1.0
+  }
+  inherit_alpha: true
+  size_mode: SIZE_MODE_AUTO
+}
+adjust_reference: ADJUST_REFERENCE_PARENT

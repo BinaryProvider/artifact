@@ -1,0 +1,27 @@
+function init(self)
+    -- Add initialization code here
+    -- Remove this function if not needed
+end
+
+function final(self)
+    -- Add finalization code here
+    -- Remove this function if not needed
+end
+
+function update(self, dt)
+    -- Add update code here
+    -- Remove this function if not needed
+end
+
+function on_message(self, message_id, message, sender)
+
+	if message_id == hash("update_time_left") then
+		--gui.set_text(gui.get_node("time_left"), string.format("%.2d:%.2d", message.time/60%60, message.time%60))
+		gui.set_text(gui.get_node("time_left"), message.time)
+	elseif message_id == hash("update_score") then
+		gui.set_text(gui.get_node("score"), message.score)
+	elseif message_id == hash("update_level") then
+		gui.set_text(gui.get_node("level"), "LEVEL " .. message.level)
+	end
+	
+end

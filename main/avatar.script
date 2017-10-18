@@ -1,0 +1,183 @@
+local input_up = hash("move_up")
+local input_down = hash("move_down")
+local input_left = hash("move_left")
+local input_right = hash("move_right")
+
+local IDLE, MOVING_UP, MOVING_DOWN, MOVING_LEFT, MOVING_RIGHT = 0, 1, 2, 3, 4
+
+local GameState = require("main.logic.gamestate")
+local Globals = require("main.logic.globals")
+
+function init(self)
+	self.speed = 128
+	self.state = IDLE
+	self.animation = hash("stand_left")
+	self.last_animation = hash("stand_left")
+	self.correction = vmath.vector3()
+	--msg.post(".", "acquire_input_focus")
+end
+
+function final(self)
+end
+
+function update(self, dt)
+
+	if GameState.GAME_OVER or GameState.GAME_WON then
+		msg.post(".", "release_input_focus")	
+	end
+
+	updatePosition(self, dt)
+end
+
+function updatePosition(self, dt)
+		
+	if self.target_pos == nil then
+		return
+	end
+	
+	local pos = go.get_position()
+	local current_tile = { x = math.ceil(pos.x / Globals.tile_size), y = math.ceil(pos.y / Globals.tile_size) }
+	
+	local newPos = pos
+	
+	play_animation(self)
+	
+	if self.state == MOVING_LEFT then
+		if newPos.x <= self.target_pos.x then
+			newPos = pos
+		else
+			newPos = vmath.vector3(pos.x - (self.speed * dt), pos.y, pos.z)			 
+		end
+	elseif self.state == MOVING_RIGHT then
+		if newPos.x >= self.target_pos.x then
+			newPos = pos
+		else
+			newPos = vmath.vector3(pos.x + (self.speed * dt), pos.y, pos.z) 
+		end
+	elseif self.state == MOVING_UP then
+		if newPos.y >= self.target_pos.y then
+			newPos = pos
+		else
+			newPos = vmath.vector3(pos.x, pos.y + (self.speed * dt), pos.z) 
+		end
+	elseif self.state == MOVING_DOWN then
+		if newPos.y <= self.target_pos.y then
+			newPos = pos
+		else
+			newPos = vmath.vector3(pos.x, pos.y - (self.speed * dt), pos.z)
+		end
+	elseif self.state == IDLE then
+		newPos = vmath.vector3((current_tile.x * Globals.tile_size) - (Globals.tile_size / 2), (current_tile.y * Globals.tile_size) - (Globals.tile_size / 2), pos.z)
+	end
+	
+	go.set_position(newPos)
+	
+	if newPos.x == pos.x and newPos.y == pos.y then	
+		self.state = IDLE
+	end
+	
+	self.correction = vmath.vector3()
+	
+end
+
+function play_animation(self)
+
+	if self.state == MOVING_LEFT then
+		animation = hash("walk_left")
+		self.last_animation = animation
+	elseif self.state == MOVING_RIGHT then
+		animation = hash("walk_right")
+		self.last_animation = animation
+	elseif self.state == MOVING_DOWN then
+		animation = hash("walk_down")
+		self.last_animation = animation
+	elseif self.state == MOVING_UP then
+		animation = hash("walk_up")
+		self.last_animation = animation
+	else
+		if self.last_animation == hash("walk_left") then
+			animation = hash("stand_left")
+		elseif self.last_animation == hash("walk_right") then
+			animation = hash("stand_right")
+		elseif self.last_animation == hash("walk_up") then
+			animation = hash("stand_up")
+		elseif self.last_animation == hash("walk_down") then
+			animation = hash("stand_down")
+		else
+			animation = hash("stand_left")
+		end
+	end
+	
+	if self.animation ~= animation then
+		msg.post("#sprite", "play_animation", {id = animation })
+        self.animation = animation
+	end
+	
+end
+
+function on_message(self, message_id, message, sender)
+    if message_id == hash("contact_point_response") then
+    	if message.group == hash("walls") then    
+	        if message.distance > 0 then
+	            local proj = vmath.project(self.correction, message.normal * message.distance)
+	            if proj < 1 then
+	                local comp = (message.distance - message.distance * proj) * message.normal
+	                go.set_position(go.get_position() + comp)
+	                self.correction = self.correction + comp
+	            end
+	        end
+        end
+    elseif message_id == hash("reset") then
+	 	self.state = IDLE
+		self.correction = vmath.vector3()
+    elseif message_id == hash("start") then
+	 	msg.post(".", "acquire_input_focus")	
+    end
+    msg.post("level#script", "avatar_collision", { other_id = message.other_id, group = message.group })
+end
+
+function on_input(self, action_id, action)
+	
+	if self.state ~= IDLE then
+		return
+	end
+
+	local pos = go.get_position()
+
+	local current_tile = { x = math.ceil(pos.x / Globals.tile_size), y = math.ceil(pos.y / Globals.tile_size) }
+	local target_tile = current_tile
+
+	if action_id == input_left then
+		target_tile.x = target_tile.x - 1
+		if Grid:walkable_tile(target_tile) then
+			self.state = MOVING_LEFT
+			self.target_pos = { x = (target_tile.x * Globals.tile_size) - (Globals.tile_size / 2), y = pos.y }
+		end
+	elseif action_id == input_right then
+		target_tile.x = target_tile.x + 1
+		if Grid:walkable_tile(target_tile) then
+			self.state = MOVING_RIGHT
+			self.target_pos = { x = (target_tile.x * Globals.tile_size) - (Globals.tile_size / 2), y = pos.y }
+		end
+	elseif action_id == input_up then
+		target_tile.y = target_tile.y + 1
+		if Grid:walkable_tile(target_tile) then
+			self.state = MOVING_UP
+			self.target_pos = { x = pos.x, y = ((target_tile.y - 1) * Globals.tile_size) + (Globals.tile_size / 2) } --wtf??
+		end
+	elseif action_id == input_down then
+		target_tile.y = target_tile.y - 1
+		if Grid:walkable_tile(target_tile) then
+			self.state = MOVING_DOWN
+			self.target_pos = { x = pos.x, y = (target_tile.y * Globals.tile_size) - (Globals.tile_size / 2) }
+		end
+	end
+	
+end
+
+function round(num)
+    return num>=0 and math.floor(num+0.5) or math.ceil(num-0.5)
+end
+
+function on_reload(self)
+end
