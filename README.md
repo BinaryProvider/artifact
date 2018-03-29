@@ -1,5 +1,7 @@
 # Artifact - Ludum Dare #36 Jam entry
 
+<img src="http://wip.johnhellbom.com/github/artifact/artifact.png" width="500">
+
 This is my [Ludum Dare #36 game jam entry](http://ludumdare.com/compo/ludum-dare-36/?action=preview&uid=112109). The theme was Ancient Technology.
 
 The game was made using [Defold](https://www.defold.com).
